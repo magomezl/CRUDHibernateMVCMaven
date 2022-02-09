@@ -43,9 +43,10 @@ public class Proceso {
 	 * 
 	 * @param sf
 	 * @param dptonum
-	 * @return 1 en caso de que el borrado de datos sea correcto 0 en caso contrario
+	 * @return true en caso de que el borrado de datos sea aceptado 
+	 *         false en caso contrario
 	 */
-	public static int eliminarDpto(SessionFactory sf, byte dptonum) {
+	public static boolean eliminarDpto(SessionFactory sf, byte dptonum) {
 		
 		try {
 			Session mS = sf.openSession();
@@ -57,14 +58,14 @@ public class Proceso {
 				mS.delete(dpto);
 				t.commit();
 				mS.close();
-				return 1;
+				return true;
 			}else {
 				t.rollback();
 				mS.close();
-				return 0;
+				return false;
 			}
 		}catch (Exception e) {
-			return 0;
+			return false;
 		}
 	}
 	
@@ -88,24 +89,55 @@ public class Proceso {
 	}
 	
 	
-	public static void modificarDpto(SessionFactory sf, byte dptonum,  String nombre, String localidad) {
+	public static boolean modificarDpto(SessionFactory sf, byte dptonum,  String nombre, String localidad) {
 		Session mS = sf.openSession();
 		Transaction t = mS.beginTransaction();
 		Departamentos dpto = mS.get(Departamentos.class, dptonum);
-		
-		if (!nombre.equals(null)) {
+		boolean testigo = false;
+		if (nombre!=null && !dpto.getDnombre().equals(nombre)) {
 			dpto.setDnombre(nombre);
+			testigo = true;
 		}
-		if(!localidad.equals(null)) {
-			dpto.setLoc(null);
+		if(localidad!=null && !dpto.getLoc().equals(localidad)) {
+			dpto.setLoc(localidad);
+			testigo = true;
 		}
-		mS.update(dpto);
-		t.commit();
-		mS.close();
-		JOptionPane.showMessageDialog(null, "Departamento modificado");
-		
+		if (testigo) {
+			mS.update(dpto);
+			t.commit();
+			mS.close();
+		}else {
+			t.rollback();
+			mS.close();
+		}
+		return testigo;
 	}
 	
-	
+	/**
+	 * 
+	 * @param <T>
+	 * @param sf
+	 * @param opt 1 si queremos retornar una lista ordenada con los códigos de deparamento, 
+	 * 			  2 si queremos retornar una lista ordenada con los nombres de departamento 
+	 *            3 para localidades de departamentos ordenadas
+	 * @return
+	 */
+	public static <T> List<T> llenarCombo(SessionFactory sf, int opt){
+		String hql=null;
+		switch(opt) {
+		case 1:
+			hql = "select distinct deptno from Departamentos order by deptno";
+			break;
+		case 2:
+			hql = "select distinct dnombre from Departamentos order by dnombre";
+			break;
+		case 3:
+			hql = "select distinct loc from Departamentos order by loc";
+			break;
+		}
+		Session mS = sf.openSession();
+		TypedQuery<T> consulta =mS.createQuery(hql);
+		return (List<T>) consulta.getResultList();
+	}
 }
 
